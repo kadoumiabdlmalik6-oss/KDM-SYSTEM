@@ -12,6 +12,7 @@ import SplashScreen from './components/SplashScreen';
 import { TradesProvider } from './hooks/useTrades';
 import { AccountsProvider } from './hooks/useAccounts';
 import PINScreen from './components/PINScreen';
+import { runMigrations } from './services/migrationService';
 
 export const ThemeContext = createContext<{ theme: Theme; toggleTheme: () => void }>({
   theme: 'light',
@@ -45,6 +46,9 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    // Run data migrations on app startup to ensure data compatibility with new versions.
+    runMigrations();
+
     const timer = setTimeout(() => setLoading(false), 2000);
     return () => clearTimeout(timer);
   }, []);

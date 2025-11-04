@@ -56,3 +56,30 @@ export const analyzeTradeWithGemini = async (trade: Trade): Promise<string> => {
     return "An error occurred while analyzing the trade. Please try again later.";
   }
 };
+
+// FIX: Add and export the missing `getMotivationQuote` function.
+export const getMotivationQuote = async (): Promise<string> => {
+  const prompt = `
+    Provide a short, powerful, and insightful motivational quote suitable for a financial trader.
+    The quote should be about discipline, patience, psychology, or risk management.
+    Do not include any attributions (e.g., "- Author Name"). Just return the quote text.
+    Keep it to a single sentence.
+  `;
+
+  try {
+    const gemini = getAi();
+    const response = await gemini.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    // Clean up response, remove potential markdown quotes or asterisks
+    return response.text.replace(/["*]/g, '').trim();
+  } catch (error) {
+    console.error("Error fetching motivation quote with Gemini:", error);
+    if (error instanceof Error && error.message.includes("API key")) {
+        return "Could not fetch a quote. Please ensure the Gemini API key is configured correctly.";
+    }
+    // Return a fallback quote on error
+    return "The market is a device for transferring money from the impatient to the patient.";
+  }
+};

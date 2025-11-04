@@ -77,10 +77,10 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   }, [trades, startDate, endDate, selectedPair, selectedAccountId]);
   
   const groupedTrades = useMemo(() => {
-    // FIX: Explicitly type the accumulator for the reduce function to ensure
-    // TypeScript correctly infers the type of `groupedTrades`. This resolves an
-    // issue where `tradesOnDate` was being inferred as `unknown`.
-    return tradesToDisplay.reduce<Record<string, Trade[]>>((acc, trade) => {
+    // FIX: Explicitly typed the accumulator in the reduce function to ensure
+    // TypeScript correctly infers the type of `groupedTrades`, resolving the error
+    // where `tradesOnDate.map` would be called on an `unknown` type.
+    return tradesToDisplay.reduce((acc: Record<string, Trade[]>, trade) => {
         const date = new Date(trade.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (!acc[date]) {
             acc[date] = [];
@@ -129,32 +129,37 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
 
   const handleDownloadCSV = () => {
     if (tradesToDisplay.length === 0) {
-        alert("No trades to download for the selected filters.");
+        alert("لا توجد صفقات لتنزيلها للمرشحات المحددة.");
         return;
     }
 
     const headers = ["Date", "Pair", "Type", "Session", "P/L ($)", "R/R", "Rating", "Notes", "Account Name"];
     
-    // Helper to safely wrap data in quotes for CSV
-    const escapeCSV = (str: string) => `"${str.replace(/"/g, '""')}"`;
+    const escapeCSV = (val: any): string => {
+        const str = String(val ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
 
-    const csvContent = [
-        headers.join(','),
-        ...tradesToDisplay.map(trade => {
-            const accountName = accounts.find(a => a.id === trade.accountId)?.name || 'N/A';
-            return [
-                new Date(trade.date).toLocaleString(),
-                trade.pair,
-                trade.type,
-                trade.session,
-                trade.pnl.toFixed(2),
-                trade.rr,
-                trade.rating,
-                escapeCSV(trade.notes),
-                accountName
-            ].join(',')
-        })
-    ].join('\n');
+    const csvRows = tradesToDisplay.map(trade => {
+        const accountName = accounts.find(a => a.id === trade.accountId)?.name || 'N/A';
+        const rowData = [
+            new Date(trade.date).toLocaleString(),
+            trade.pair,
+            trade.type,
+            trade.session,
+            trade.pnl.toFixed(2),
+            trade.rr,
+            trade.rating,
+            trade.notes,
+            accountName
+        ];
+        return rowData.map(escapeCSV).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");

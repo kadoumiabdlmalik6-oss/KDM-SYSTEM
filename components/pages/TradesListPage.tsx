@@ -7,6 +7,7 @@ import StarRating from '../common/StarRating';
 import AddTradePage from './AddTradePage';
 import { analyzeTradeWithGemini } from '../../geminiService';
 import TradeListItem from '../common/TradeListItem';
+import TradeDetailView from '../common/TradeDetailView';
 
 interface TradesListPageProps {
     navigate: (page: Page) => void;
@@ -41,8 +42,6 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
-  const [analysis, setAnalysis] = useState<string>('');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const uniquePairs = useMemo(() => {
     const pairs = new Set(trades.map(t => t.pair));
@@ -72,41 +71,31 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   }, [trades, startDate, endDate, selectedPair]);
   
   const groupedTrades = useMemo(() => {
-    return tradesToDisplay.reduce<Record<string, Trade[]>>((acc, trade) => {
+    // FIX: Explicitly type the initial value of the reduce function to ensure
+    // TypeScript correctly infers the type of `groupedTrades`. This resolves an
+    // issue where `tradesOnDate` was inferred as `unknown`.
+    return tradesToDisplay.reduce((acc: Record<string, Trade[]>, trade) => {
         const date = new Date(trade.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (!acc[date]) {
             acc[date] = [];
         }
         acc[date].push(trade);
         return acc;
-    }, {});
+    }, {} as Record<string, Trade[]>);
   }, [tradesToDisplay]);
-
-  const handleAnalyze = async () => {
-    if (!selectedTrade) return;
-    setIsAnalyzing(true);
-    setAnalysis('');
-    const result = await analyzeTradeWithGemini(selectedTrade);
-    setAnalysis(result);
-    setIsAnalyzing(false);
-  };
   
-  const handleEdit = () => {
-      if (selectedTrade) {
-          setTradeToEdit(selectedTrade);
-          setSelectedTrade(null);
-      }
+  const handleEdit = (trade: Trade) => {
+      setTradeToEdit(trade);
+      setSelectedTrade(null);
   };
   
   const handleCancelEdit = () => {
       setTradeToEdit(null);
   };
 
-  const handleDelete = () => {
-      if (selectedTrade && window.confirm('Are you sure you want to delete this trade?')) {
-          deleteTrade(selectedTrade.id);
-          setSelectedTrade(null);
-      }
+  const handleDelete = (tradeId: string) => {
+      deleteTrade(tradeId);
+      setSelectedTrade(null);
   }
 
   const handleFilterPeriodChange = (period: string) => {
@@ -178,94 +167,12 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   
   if (selectedTrade) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <button onClick={() => { setSelectedTrade(null); setAnalysis(''); }} className="text-primary font-semibold">&larr; Back to list</button>
-        </div>
-        
-        <Card>
-            <div className="flex justify-between items-start">
-                <h2 className="text-xl font-bold">{selectedTrade.pair}</h2>
-                <div className={`px-3 py-1 text-sm font-semibold rounded-full ${selectedTrade.type === 'buy' ? 'bg-green-500/20 text-green-500' : 'bg-red-500/20 text-red-500'}`}>
-                    {selectedTrade.type.toUpperCase()}
-                </div>
-            </div>
-            <div className="mt-2 text-gray-400 text-sm">
-                {new Date(selectedTrade.date).toLocaleString()} &bull; {selectedTrade.session}
-            </div>
-        </Card>
-        
-        <Card>
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <h4 className="text-sm text-gray-400">Result</h4>
-                    <p className={`text-lg font-bold ${selectedTrade.pnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                        {selectedTrade.pnl >= 0 ? '+' : ''}${selectedTrade.pnl.toFixed(2)}
-                    </p>
-                </div>
-                <div>
-                    <h4 className="text-sm text-gray-400">Risk/Reward</h4>
-                    <p className="text-lg font-bold">1:{selectedTrade.rr}</p>
-                </div>
-                {selectedTrade.entryPrice && <div><h4 className="text-sm text-gray-400">Entry</h4><p>{selectedTrade.entryPrice}</p></div>}
-                {selectedTrade.exitPrice && <div><h4 className="text-sm text-gray-400">Exit</h4><p>{selectedTrade.exitPrice}</p></div>}
-            </div>
-            <div className="mt-4">
-                 <h4 className="text-sm text-gray-400 mb-1">Rating</h4>
-                 <StarRating rating={selectedTrade.rating} />
-            </div>
-        </Card>
-        
-        {selectedTrade.notes && (
-            <Card>
-                <h4 className="font-semibold mb-2">Notes</h4>
-                <p className="text-gray-300 whitespace-pre-wrap">{selectedTrade.notes}</p>
-            </Card>
-        )}
-
-        {(selectedTrade.beforeImageUrl || selectedTrade.afterImageUrl) && (
-            <Card>
-                <h4 className="font-semibold mb-2">Attachments</h4>
-                <div className="flex gap-4">
-                    {selectedTrade.beforeImageUrl && (
-                        <div>
-                            <p className="text-sm text-center mb-1 text-gray-400">Before</p>
-                            <img src={selectedTrade.beforeImageUrl} alt="Before trade" className="rounded-lg max-h-48" />
-                        </div>
-                    )}
-                    {selectedTrade.afterImageUrl && (
-                        <div>
-                            <p className="text-sm text-center mb-1 text-gray-400">After</p>
-                            <img src={selectedTrade.afterImageUrl} alt="After trade" className="rounded-lg max-h-48" />
-                        </div>
-                    )}
-                </div>
-            </Card>
-        )}
-        
-        <Card>
-            <h3 className="text-lg font-semibold mb-2">AI Analysis</h3>
-            {analysis ? (
-              <div className="prose prose-invert max-w-none dark:prose-p:text-dark-text prose-p:text-light-text prose-headings:text-primary">
-                 <ReactMarkdown>{analysis}</ReactMarkdown>
-              </div>
-            ) : (
-              <button onClick={handleAnalyze} disabled={isAnalyzing} className="w-full bg-primary text-white font-bold py-2 px-4 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-wait">
-                {isAnalyzing ? 'Analyzing...' : 'Analyze with AI'}
-              </button>
-            )}
-        </Card>
-
-        <div className="flex gap-4 pt-4">
-            <button onClick={handleEdit} className="w-full bg-blue-500/20 text-blue-500 font-bold py-2 px-4 rounded-lg hover:bg-blue-500/30 transition-colors">
-              Edit
-            </button>
-            <button onClick={handleDelete} className="w-full bg-red-500/20 text-red-500 font-bold py-2 px-4 rounded-lg hover:bg-red-500/30 transition-colors">
-              Delete
-            </button>
-        </div>
-
-      </div>
+      <TradeDetailView
+        trade={selectedTrade}
+        onBack={() => setSelectedTrade(null)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     );
   }
   

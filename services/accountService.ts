@@ -5,7 +5,7 @@ const ACCOUNTS_KEY = 'kdm_journal_accounts';
 const seedInitialData = () => {
     if(!localStorage.getItem(ACCOUNTS_KEY)) {
         const initialAccounts: Account[] = [
-            { id: 'default', name: 'Default Account' },
+            { id: 'default', name: 'Default Account', balance: 10000 },
         ];
         localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(initialAccounts));
     }

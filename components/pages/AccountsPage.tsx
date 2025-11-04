@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Account } from '../../types';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useTrades } from '../../hooks/useTrades';
@@ -16,15 +16,21 @@ const TrashIcon: React.FC = () => (
 
 
 const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
-  const { accounts, addAccount, deleteAccount, loading } = useAccounts();
-  const { deleteTradesByAccountId } = useTrades();
+  // FIX: Destructure `deleteAccount` from `useAccounts` to make it available in the component.
+  const { accounts, addAccount, loading, deleteAccount } = useAccounts();
+  const { trades, deleteTradesByAccountId } = useTrades();
   const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountBalance, setNewAccountBalance] = useState('');
 
   const handleAddAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newAccountName.trim() === '') return;
-    addAccount({ name: newAccountName.trim() });
+    if (newAccountName.trim() === '' || !newAccountBalance) {
+      alert('Please provide an account name and initial balance.');
+      return;
+    }
+    addAccount({ name: newAccountName.trim(), balance: parseFloat(newAccountBalance) });
     setNewAccountName('');
+    setNewAccountBalance('');
   };
 
   const handleDeleteAccount = (e: React.MouseEvent, accountId: string) => {
@@ -37,22 +43,45 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
   };
 
   const visibleAccounts = accounts.filter(account => account.id !== 'default');
+  
+  const accountsWithData = useMemo(() => {
+    return visibleAccounts.map(account => {
+      const accountTrades = trades.filter(trade => trade.accountId === account.id);
+      const totalPnl = accountTrades.reduce((acc, trade) => acc + trade.pnl, 0);
+      const currentBalance = (account.balance || 0) + totalPnl;
+      return {
+        ...account,
+        totalPnl,
+        currentBalance,
+      };
+    });
+  }, [visibleAccounts, trades]);
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold">Trading Accounts</h2>
 
       <Card>
-        <form onSubmit={handleAddAccount} className="flex gap-2 items-center">
+        <form onSubmit={handleAddAccount} className="flex flex-col sm:flex-row gap-2">
           <input
             type="text"
             value={newAccountName}
             onChange={(e) => setNewAccountName(e.target.value)}
             placeholder="New account name..."
-            className="flex-grow p-3 bg-light-bg dark:bg-dark-bg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-full sm:flex-grow p-3 bg-light-bg dark:bg-dark-bg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            required
           />
-          <button type="submit" className="bg-primary text-white p-3 rounded-lg hover:opacity-90 transition-opacity flex-shrink-0" aria-label="Add new account">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <input
+            type="number"
+            step="any"
+            value={newAccountBalance}
+            onChange={(e) => setNewAccountBalance(e.target.value)}
+            placeholder="Balance ($)"
+            className="w-full sm:w-36 p-3 bg-light-bg dark:bg-dark-bg border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            required
+          />
+          <button type="submit" className="w-full sm:w-auto bg-primary text-white p-3 rounded-lg hover:opacity-90 transition-opacity flex-shrink-0" aria-label="Add new account">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mx-auto sm:mx-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v12m6-6H6" />
               </svg>
           </button>
@@ -62,17 +91,33 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
       {loading && <p>Loading accounts...</p>}
 
       <div className="space-y-4">
-        {visibleAccounts.map(account => (
+        {accountsWithData.map(account => (
           <Card key={account.id} onClick={() => onAccountSelect(account)} className="hover:bg-primary/10">
-            <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">{account.name}</h3>
-                <button
-                    onClick={(e) => handleDeleteAccount(e, account.id)}
-                    className="p-2 rounded-full text-red-500/70 hover:bg-red-500/20 hover:text-red-500 transition-colors"
-                    aria-label={`Delete account ${account.name}`}
-                >
-                    <TrashIcon />
-                </button>
+             <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">{account.name}</h3>
+                  <p className={`text-lg font-bold ${account.currentBalance >= (account.balance || 0) ? 'text-green-500' : 'text-red-500'}`}>
+                    ${account.currentBalance.toFixed(2)}
+                  </p>
+                  <p className="text-sm text-gray-400">
+                    Initial: ${(account.balance || 0).toFixed(2)}
+                  </p>
+                </div>
+                <div className="flex items-center">
+                  <div className="text-right mr-4">
+                        <p className={`font-semibold ${account.totalPnl >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                            {account.totalPnl >= 0 ? '+' : ''}${account.totalPnl.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-400">Total P/L</p>
+                  </div>
+                  <button
+                      onClick={(e) => handleDeleteAccount(e, account.id)}
+                      className="p-2 rounded-full text-red-500/70 hover:bg-red-500/20 hover:text-red-500 transition-colors"
+                      aria-label={`Delete account ${account.name}`}
+                  >
+                      <TrashIcon />
+                  </button>
+                </div>
             </div>
           </Card>
         ))}

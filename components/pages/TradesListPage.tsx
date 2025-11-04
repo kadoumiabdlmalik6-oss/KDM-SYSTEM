@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Page, Trade } from '../../types';
 import { useTrades } from '../../hooks/useTrades';
+import { useAccounts } from '../../hooks/useAccounts';
 import Card from '../common/Card';
 import StarRating from '../common/StarRating';
 import AddTradePage from './AddTradePage';
@@ -36,9 +37,11 @@ const DownloadIcon: React.FC = () => (
 
 const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   const { trades, loading, deleteTrade } = useTrades();
+  const { accounts } = useAccounts();
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedPair, setSelectedPair] = useState('all');
+  const [selectedAccountId, setSelectedAccountId] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [selectedTrade, setSelectedTrade] = useState<Trade | null>(null);
   const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
@@ -56,7 +59,10 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
       
       if(start) start.setHours(0,0,0,0);
       if(end) end.setHours(23,59,59,999);
-
+      
+      if (selectedAccountId !== 'all' && trade.accountId !== selectedAccountId) {
+        return false;
+      }
       if (selectedPair !== 'all' && trade.pair !== selectedPair) {
         return false;
       }
@@ -68,20 +74,20 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
       }
       return true;
     });
-  }, [trades, startDate, endDate, selectedPair]);
+  }, [trades, startDate, endDate, selectedPair, selectedAccountId]);
   
   const groupedTrades = useMemo(() => {
-    // FIX: Explicitly type the initial value of the reduce function to ensure
+    // FIX: Explicitly type the accumulator for the reduce function to ensure
     // TypeScript correctly infers the type of `groupedTrades`. This resolves an
-    // issue where `tradesOnDate` was inferred as `unknown`.
-    return tradesToDisplay.reduce((acc: Record<string, Trade[]>, trade) => {
+    // issue where `tradesOnDate` was being inferred as `unknown`.
+    return tradesToDisplay.reduce<Record<string, Trade[]>>((acc, trade) => {
         const date = new Date(trade.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (!acc[date]) {
             acc[date] = [];
         }
         acc[date].push(trade);
         return acc;
-    }, {} as Record<string, Trade[]>);
+    }, {});
   }, [tradesToDisplay]);
   
   const handleEdit = (trade: Trade) => {
@@ -127,23 +133,27 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
         return;
     }
 
-    const headers = ["Date", "Pair", "Type", "Session", "P/L ($)", "R/R", "Rating", "Notes"];
+    const headers = ["Date", "Pair", "Type", "Session", "P/L ($)", "R/R", "Rating", "Notes", "Account Name"];
     
     // Helper to safely wrap data in quotes for CSV
     const escapeCSV = (str: string) => `"${str.replace(/"/g, '""')}"`;
 
     const csvContent = [
         headers.join(','),
-        ...tradesToDisplay.map(trade => [
-            new Date(trade.date).toLocaleString(),
-            trade.pair,
-            trade.type,
-            trade.session,
-            trade.pnl.toFixed(2),
-            trade.rr,
-            trade.rating,
-            escapeCSV(trade.notes)
-        ].join(','))
+        ...tradesToDisplay.map(trade => {
+            const accountName = accounts.find(a => a.id === trade.accountId)?.name || 'N/A';
+            return [
+                new Date(trade.date).toLocaleString(),
+                trade.pair,
+                trade.type,
+                trade.session,
+                trade.pnl.toFixed(2),
+                trade.rr,
+                trade.rating,
+                escapeCSV(trade.notes),
+                accountName
+            ].join(',')
+        })
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -182,6 +192,7 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
     const commonButtonClasses = "px-3 py-1 text-sm rounded-full transition-colors focus:outline-none";
     const activeButtonClasses = "bg-primary text-white";
     const inactiveButtonClasses = "bg-light-bg dark:bg-dark-bg hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600";
+    const visibleAccounts = accounts.filter(acc => acc.id !== 'default');
 
     return (
       <>
@@ -205,7 +216,14 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
                 <button onClick={() => handleFilterPeriodChange('week')} className={`${commonButtonClasses} ${filterPeriod === 'week' ? activeButtonClasses : inactiveButtonClasses}`}>This Week</button>
                 <button onClick={() => handleFilterPeriodChange('month')} className={`${commonButtonClasses} ${filterPeriod === 'month' ? activeButtonClasses : inactiveButtonClasses}`}>This Month</button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-400 mb-1">Trading Account</label>
+                    <select value={selectedAccountId} onChange={e => setSelectedAccountId(e.target.value)} className={selectClasses}>
+                        <option value="all">All Accounts</option>
+                        {visibleAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+                    </select>
+                </div>
                 <div>
                     <label className="block text-sm font-medium text-gray-400 mb-1">Pair</label>
                     <select value={selectedPair} onChange={e => setSelectedPair(e.target.value)} className={selectClasses}>

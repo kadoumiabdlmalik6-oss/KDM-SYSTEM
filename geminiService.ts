@@ -21,24 +21,24 @@ export const analyzeTradeWithGemini = async (trade: Trade): Promise<string> => {
   const outcome = trade.pnl >= 0 ? 'profit' : 'loss';
 
   const prompt = `
-    As a professional trading coach, analyze the following trade and provide constructive feedback. 
-    Focus on potential improvements, risk management, and psychological aspects.
-    Keep the analysis concise, insightful, and easy to understand for an intermediate trader.
-    Format your response in markdown.
+    بصفتك مدرب تداول محترف، قم بتحليل الصفقة التالية وقدم ملاحظات بناءة باللغة العربية.
+    ركز على التحسينات المحتملة، وإدارة المخاطر، والجوانب النفسية.
+    اجعل التحليل موجزًا وثاقبًا وسهل الفهم لمتداول متوسط الخبرة.
+    نسق ردك باستخدام الماركداون.
 
-    **Trade Details:**
-    - **Trading Pair:** ${trade.pair}
-    - **Type:** ${trade.type.charAt(0).toUpperCase() + trade.type.slice(1)}
-    - **Session:** ${trade.session}
-    ${trade.entryPrice ? `- **Entry Price:** ${trade.entryPrice}` : ''}
-    ${trade.exitPrice ? `- **Exit Price:** ${trade.exitPrice}` : ''}
-    - **Risk/Reward Ratio:** 1:${trade.rr}
-    - **Outcome:** A ${outcome} of $${Math.abs(trade.pnl).toFixed(2)}
-    - **Date:** ${new Date(trade.date).toLocaleDateString()}
-    - **Trader's Rating:** ${trade.rating} out of 5 stars
-    - **Trader's Notes:** "${trade.notes}"
+    **تفاصيل الصفقة:**
+    - **زوج التداول:** ${trade.pair}
+    - **النوع:** ${trade.type === 'buy' ? 'شراء' : 'بيع'}
+    - **الجلسة:** ${trade.session}
+    ${trade.entryPrice ? `- **سعر الدخول:** ${trade.entryPrice}` : ''}
+    ${trade.exitPrice ? `- **سعر الخروج:** ${trade.exitPrice}` : ''}
+    - **نسبة المخاطرة/العائد:** 1:${trade.rr}
+    - **النتيجة:** ${outcome === 'profit' ? 'ربح' : 'خسارة'} بقيمة ${Math.abs(trade.pnl).toFixed(2)}$
+    - **التاريخ:** ${new Date(trade.date).toLocaleDateString('ar-EG')}
+    - **تقييم المتداول:** ${trade.rating} من 5 نجوم
+    - **ملاحظات المتداول:** "${trade.notes}"
 
-    **Your Analysis:**
+    **تحليلك:**
   `;
 
   try {
@@ -51,19 +51,19 @@ export const analyzeTradeWithGemini = async (trade: Trade): Promise<string> => {
   } catch (error) {
     console.error("Error analyzing trade with Gemini:", error);
     if (error instanceof Error && error.message.includes("API key")) {
-        return "AI analysis failed. The Gemini API key is not configured correctly. Please ask the administrator to set it up in the Vercel environment variables.";
+        return "فشل تحليل الذكاء الاصطناعي. لم يتم تكوين مفتاح Gemini API بشكل صحيح. يرجى الطلب من المسؤول إعداده في متغيرات بيئة Vercel.";
     }
-    return "An error occurred while analyzing the trade. Please try again later.";
+    return "حدث خطأ أثناء تحليل الصفقة. يرجى المحاولة مرة أخرى لاحقًا.";
   }
 };
 
 // FIX: Add and export the missing `getMotivationQuote` function.
 export const getMotivationQuote = async (): Promise<string> => {
   const prompt = `
-    Provide a short, powerful, and insightful motivational quote suitable for a financial trader.
-    The quote should be about discipline, patience, psychology, or risk management.
-    Do not include any attributions (e.g., "- Author Name"). Just return the quote text.
-    Keep it to a single sentence.
+    قدم اقتباسًا تحفيزيًا قصيرًا وقويًا ومتبصرًا ومناسبًا لمتداول مالي باللغة العربية.
+    يجب أن يكون الاقتباس عن الانضباط أو الصبر أو علم النفس أو إدارة المخاطر.
+    لا تضمن أي إسناد (مثل "- اسم المؤلف"). أرجع نص الاقتباس فقط.
+    اجعله في جملة واحدة.
   `;
 
   try {
@@ -77,9 +77,9 @@ export const getMotivationQuote = async (): Promise<string> => {
   } catch (error) {
     console.error("Error fetching motivation quote with Gemini:", error);
     if (error instanceof Error && error.message.includes("API key")) {
-        return "Could not fetch a quote. Please ensure the Gemini API key is configured correctly.";
+        return "تعذر جلب الاقتباس. يرجى التأكد من تكوين مفتاح Gemini API بشكل صحيح.";
     }
     // Return a fallback quote on error
-    return "The market is a device for transferring money from the impatient to the patient.";
+    return "السوق هو أداة لنقل الأموال من غير الصبورين إلى الصبورين.";
   }
 };

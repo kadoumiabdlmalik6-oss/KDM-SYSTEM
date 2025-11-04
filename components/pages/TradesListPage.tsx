@@ -28,12 +28,6 @@ const getStartOf = (unit: 'day' | 'week' | 'month', date: Date): Date => {
     return d;
 };
 
-const DownloadIcon: React.FC = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-    </svg>
-);
-
 
 const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   const { trades, loading, deleteTrade } = useTrades();
@@ -78,8 +72,8 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   
   const groupedTrades = useMemo(() => {
     // FIX: Explicitly typed the accumulator in the reduce function to ensure
-    // TypeScript correctly infers the type of `groupedTrades`, resolving the error
-    // where `tradesOnDate.map` would be called on an `unknown` type.
+    // TypeScript correctly infers the type of `groupedTrades`. This resolves
+    // an error where `tradesOnDate.map` would be called on an `unknown` type.
     return tradesToDisplay.reduce((acc: Record<string, Trade[]>, trade) => {
         const date = new Date(trade.date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         if (!acc[date]) {
@@ -127,55 +121,6 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
     setFilterPeriod('custom');
   };
 
-  const handleDownloadCSV = () => {
-    if (tradesToDisplay.length === 0) {
-        alert("لا توجد صفقات لتنزيلها للمرشحات المحددة.");
-        return;
-    }
-
-    const headers = ["Date", "Pair", "Type", "Session", "P/L ($)", "R/R", "Rating", "Notes", "Account Name"];
-    
-    const escapeCSV = (val: any): string => {
-        const str = String(val ?? '');
-        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
-            return `"${str.replace(/"/g, '""')}"`;
-        }
-        return str;
-    };
-
-    const csvRows = tradesToDisplay.map(trade => {
-        const accountName = accounts.find(a => a.id === trade.accountId)?.name || 'N/A';
-        const rowData = [
-            new Date(trade.date).toLocaleString(),
-            trade.pair,
-            trade.type,
-            trade.session,
-            trade.pnl.toFixed(2),
-            trade.rr,
-            trade.rating,
-            trade.notes,
-            accountName
-        ];
-        return rowData.map(escapeCSV).join(',');
-    });
-
-    const csvContent = [headers.join(','), ...csvRows].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", "kdm_journal_trades_export.csv");
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-  };
-
-
   if (tradeToEdit) {
     return <AddTradePage navigate={navigate} tradeToEdit={tradeToEdit} onClose={handleCancelEdit} />;
   }
@@ -205,16 +150,7 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
           <h2 className="text-2xl font-semibold">All Trades</h2>
           
           <Card>
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold">Filters</h3>
-                <button 
-                    onClick={handleDownloadCSV} 
-                    className="p-2 rounded-full text-primary hover:bg-primary/20 transition-colors"
-                    aria-label="Download filtered trades as CSV"
-                >
-                    <DownloadIcon />
-                </button>
-            </div>
+            <h3 className="text-lg font-semibold mb-4">Filters</h3>
             <div className="flex flex-wrap gap-2 mb-4">
                 <button onClick={() => handleFilterPeriodChange('all')} className={`${commonButtonClasses} ${filterPeriod === 'all' ? activeButtonClasses : inactiveButtonClasses}`}>All Time</button>
                 <button onClick={() => handleFilterPeriodChange('today')} className={`${commonButtonClasses} ${filterPeriod === 'today' ? activeButtonClasses : inactiveButtonClasses}`}>Today</button>
@@ -249,7 +185,7 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
           {Object.entries(groupedTrades).map(([date, tradesOnDate]) => (
               <div key={date}>
                   <h3 className="font-semibold text-gray-400 my-4">{date}</h3>
-                  {tradesOnDate.map(trade => (
+                  {(tradesOnDate as Trade[]).map(trade => (
                       <TradeListItem key={trade.id} trade={trade} onClick={() => setSelectedTrade(trade)} />
                   ))}
               </div>

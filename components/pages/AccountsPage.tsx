@@ -14,9 +14,14 @@ const TrashIcon: React.FC = () => (
     </svg>
 );
 
+const DownloadIcon: React.FC = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+        <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+);
+
 
 const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
-  // FIX: Destructure `deleteAccount` from `useAccounts` to make it available in the component.
   const { accounts, addAccount, loading, deleteAccount } = useAccounts();
   const { trades, deleteTradesByAccountId } = useTrades();
   const [newAccountName, setNewAccountName] = useState('');
@@ -39,6 +44,58 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
         // Orchestrate deletion: first trades, then the account.
         deleteTradesByAccountId(accountId);
         deleteAccount(accountId);
+    }
+  };
+
+  const handleDownloadAccountCSV = (e: React.MouseEvent, accountId: string) => {
+    e.stopPropagation(); // Prevent card click
+    
+    const accountTrades = trades.filter(trade => trade.accountId === accountId);
+    const account = accounts.find(acc => acc.id === accountId);
+
+    if (accountTrades.length === 0) {
+        alert(`لا توجد صفقات لتنزيلها لحساب '${account?.name}'.`);
+        return;
+    }
+
+    const headers = ["Date", "Pair", "Type", "Session", "P/L ($)", "R/R", "Rating", "Notes"];
+    
+    const escapeCSV = (val: any): string => {
+        const str = String(val ?? '');
+        if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+        return str;
+    };
+
+    const csvRows = accountTrades.map(trade => {
+        const rowData = [
+            new Date(trade.date).toLocaleString(),
+            trade.pair,
+            trade.type,
+            trade.session,
+            trade.pnl.toFixed(2),
+            trade.rr,
+            trade.rating,
+            trade.notes,
+        ];
+        return rowData.map(escapeCSV).join(',');
+    });
+
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+
+    if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        const filename = `kdm_journal_trades_${account?.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() || accountId}.csv`;
+        link.setAttribute("href", url);
+        link.setAttribute("download", filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
   };
 
@@ -110,6 +167,13 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
                         </p>
                         <p className="text-xs text-gray-400">Total P/L</p>
                   </div>
+                   <button
+                      onClick={(e) => handleDownloadAccountCSV(e, account.id)}
+                      className="p-2 rounded-full text-primary/70 hover:bg-primary/20 hover:text-primary transition-colors"
+                      aria-label={`Download trades for ${account.name}`}
+                  >
+                      <DownloadIcon />
+                  </button>
                   <button
                       onClick={(e) => handleDeleteAccount(e, account.id)}
                       className="p-2 rounded-full text-red-500/70 hover:bg-red-500/20 hover:text-red-500 transition-colors"

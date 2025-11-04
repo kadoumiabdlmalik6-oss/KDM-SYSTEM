@@ -27,6 +27,7 @@ export enum Page {
   Add = 'ADD',
   Stats = 'STATS',
   Accounts = 'ACCOUNTS',
+  Tools = 'TOOLS',
 }
 
 export type Theme = 'light' | 'dark';

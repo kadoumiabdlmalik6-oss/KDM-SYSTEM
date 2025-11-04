@@ -6,6 +6,7 @@ import AddTradePage from './components/pages/AddTradePage';
 import StatsPage from './components/StatsPage';
 import AccountsPage from './components/pages/AccountsPage';
 import AccountStatsPage from './components/pages/AccountStatsPage';
+import ToolsPage from './components/pages/ToolsPage';
 import Header from './components/Header';
 import BottomNav from './components/BottomNav';
 import SplashScreen from './components/SplashScreen';
@@ -72,6 +73,8 @@ export default function App() {
         return <AddTradePage navigate={handleSetCurrentPage} />;
       case Page.Stats:
         return <StatsPage />;
+      case Page.Tools:
+        return <ToolsPage />;
       case Page.Accounts:
         if (selectedAccount) {
           return <AccountStatsPage account={selectedAccount} onBack={() => setSelectedAccount(null)} />;

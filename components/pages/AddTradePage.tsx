@@ -122,7 +122,7 @@ const AddTradePage: React.FC<AddTradePageProps> = ({ navigate, tradeToEdit, onCl
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalPair = pair === 'Other' ? customPair.toUpperCase() : pair;
     if (!finalPair || (pnlAmount === '' && outcome !== 'break-even') || rating === 0 || !rr || !accountId) {
@@ -153,9 +153,9 @@ const AddTradePage: React.FC<AddTradePageProps> = ({ navigate, tradeToEdit, onCl
     };
 
     if (tradeToEdit) {
-      updateTrade({ ...tradeData, id: tradeToEdit.id });
+      await updateTrade({ ...tradeData, id: tradeToEdit.id });
     } else {
-      addTrade(tradeData);
+      await addTrade(tradeData);
     }
     
     handleClose();

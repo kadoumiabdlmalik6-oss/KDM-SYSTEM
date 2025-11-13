@@ -6,11 +6,11 @@ import * as tradeService from '../services/tradeService';
 interface TradesContextType {
   trades: Trade[];
   loading: boolean;
-  addTrade: (trade: Omit<Trade, 'id'>) => void;
-  updateTrade: (trade: Trade) => void;
-  deleteTrade: (id: string) => void;
-  deleteTradesByAccountId: (accountId: string) => void;
-  refreshTrades: () => void;
+  addTrade: (trade: Omit<Trade, 'id'>) => Promise<void>;
+  updateTrade: (trade: Trade) => Promise<void>;
+  deleteTrade: (id: string) => Promise<void>;
+  deleteTradesByAccountId: (accountId: string) => Promise<void>;
+  refreshTrades: () => Promise<void>;
 }
 
 // Create the context
@@ -21,39 +21,43 @@ export const TradesProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshTrades = useCallback(() => {
+  const refreshTrades = useCallback(async () => {
     setLoading(true);
-    const fetchedTrades = tradeService.getTrades();
-    fetchedTrades.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    setTrades(fetchedTrades);
-    setLoading(false);
+    try {
+        const fetchedTrades = await tradeService.getTrades();
+        fetchedTrades.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setTrades(fetchedTrades);
+    } catch (error) {
+        console.error("Failed to fetch trades:", error);
+    } finally {
+        setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     refreshTrades();
   }, [refreshTrades]);
 
-  const addTrade = useCallback((trade: Omit<Trade, 'id'>) => {
-    tradeService.addTrade(trade);
-    refreshTrades();
+  const addTrade = useCallback(async (trade: Omit<Trade, 'id'>) => {
+    await tradeService.addTrade(trade);
+    await refreshTrades();
   }, [refreshTrades]);
 
-  const updateTrade = useCallback((trade: Trade) => {
-    tradeService.updateTrade(trade);
-    refreshTrades();
+  const updateTrade = useCallback(async (trade: Trade) => {
+    await tradeService.updateTrade(trade);
+    await refreshTrades();
   }, [refreshTrades]);
 
-  const deleteTrade = useCallback((id: string) => {
-    tradeService.deleteTrade(id);
-    setTrades(prevTrades => prevTrades.filter(trade => trade.id !== id));
-  }, []);
+  const deleteTrade = useCallback(async (id: string) => {
+    await tradeService.deleteTrade(id);
+    await refreshTrades(); // Refresh to ensure consistency after deletion
+  }, [refreshTrades]);
   
-  const deleteTradesByAccountId = useCallback((accountId: string) => {
-    tradeService.deleteTradesByAccountId(accountId);
-    setTrades(prevTrades => prevTrades.filter(trade => trade.accountId !== accountId));
-  }, []);
+  const deleteTradesByAccountId = useCallback(async (accountId: string) => {
+    await tradeService.deleteTradesByAccountId(accountId);
+    await refreshTrades(); // Refresh to ensure consistency after deletion
+  }, [refreshTrades]);
 
-  // FIX: Memoize the context value to prevent unnecessary re-renders of consumer components.
   const value = useMemo(() => ({ 
     trades, 
     loading, 
@@ -64,7 +68,6 @@ export const TradesProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     refreshTrades 
   }), [trades, loading, addTrade, updateTrade, deleteTrade, deleteTradesByAccountId, refreshTrades]);
 
-  // FIX: Replaced JSX with React.createElement to be compatible with a .ts file.
   return React.createElement(TradesContext.Provider, { value }, children);
 };
 

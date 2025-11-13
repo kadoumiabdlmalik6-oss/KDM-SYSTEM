@@ -27,23 +27,23 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ onAccountSelect }) => {
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountBalance, setNewAccountBalance] = useState('');
 
-  const handleAddAccount = (e: React.FormEvent) => {
+  const handleAddAccount = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newAccountName.trim() === '' || !newAccountBalance) {
       alert('Please provide an account name and initial balance.');
       return;
     }
-    addAccount({ name: newAccountName.trim(), balance: parseFloat(newAccountBalance) });
+    await addAccount({ name: newAccountName.trim(), balance: parseFloat(newAccountBalance) });
     setNewAccountName('');
     setNewAccountBalance('');
   };
 
-  const handleDeleteAccount = (e: React.MouseEvent, accountId: string) => {
+  const handleDeleteAccount = async (e: React.MouseEvent, accountId: string) => {
     e.stopPropagation(); // Prevent card click which navigates to stats
     if (window.confirm('Are you sure you want to delete this account and ALL its associated trades? This action cannot be undone.')) {
         // Orchestrate deletion: first trades, then the account.
-        deleteTradesByAccountId(accountId);
-        deleteAccount(accountId);
+        await deleteTradesByAccountId(accountId);
+        await deleteAccount(accountId);
     }
   };
 

@@ -21,7 +21,7 @@ const AccountStatsPage: React.FC<AccountStatsPageProps> = ({ account, onBack }) 
   const accountTrades = useMemo(() => {
     return trades
         .filter(t => t.accountId === account.id)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [trades, account.id]);
   
   const totalTrades = accountTrades.length;
@@ -50,8 +50,8 @@ const AccountStatsPage: React.FC<AccountStatsPageProps> = ({ account, onBack }) 
     setSelectedTrade(null);
   };
 
-  const handleDelete = (tradeId: string) => {
-      deleteTrade(tradeId);
+  const handleDelete = async (tradeId: string) => {
+      await deleteTrade(tradeId);
       setSelectedTrade(null);
   };
 
@@ -143,7 +143,7 @@ const AccountStatsPage: React.FC<AccountStatsPageProps> = ({ account, onBack }) 
 
           <h3 className="text-xl font-semibold pt-4">Trades</h3>
            <div className="space-y-4">
-              {accountTrades.map(trade => (
+              {accountTrades.slice().reverse().map(trade => (
                 <TradeListItem key={trade.id} trade={trade} onClick={() => setSelectedTrade(trade)} />
               ))}
           </div>

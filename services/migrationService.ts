@@ -1,69 +1,63 @@
+import { initDB, add, getAll } from './dbService';
+import { Trade, Account } from '../types';
+
 const DATA_VERSION_KEY = 'kdm_journal_data_version';
 const TRADES_KEY = 'kdm_journal_trades';
 const ACCOUNTS_KEY = 'kdm_journal_accounts';
+const CURRENT_VERSION = 2; // V2 uses IndexedDB
 
-// The current version of the data schema. Increment this when you make breaking schema changes.
-const CURRENT_VERSION = 1;
+const migrateAndSeed = async () => {
+    const oldTradesData = localStorage.getItem(TRADES_KEY);
+    const oldAccountsData = localStorage.getItem(ACCOUNTS_KEY);
 
-/**
- * Define migration functions here.
- * Each key is the version number you are migrating TO.
- * The function should handle the transformation of data from version (key - 1) to version (key).
- */
-const migrations: { [version: number]: () => void } = {
-  // Example for a future version 2:
-  // 2: () => {
-  //   console.log('Migrating data to version 2...');
-  //   const tradesJson = localStorage.getItem(TRADES_KEY);
-  //   if (tradesJson) {
-  //       const trades: any[] = JSON.parse(tradesJson);
-  //       const migratedTrades = trades.map(trade => ({
-  //         ...trade,
-  //         newRequiredField: 'default value', // Add a new field with a default
-  //       }));
-  //       localStorage.setItem(TRADES_KEY, JSON.stringify(migratedTrades));
-  //   }
-  //   console.log('Trade migration to v2 complete.');
-  // },
+    if (oldTradesData || oldAccountsData) {
+        console.log('Old localStorage data found. Migrating to IndexedDB...');
+        if (oldAccountsData) {
+            try {
+                const accounts: Account[] = JSON.parse(oldAccountsData);
+                for (const account of accounts) await add('accounts', account);
+            } catch (e) { console.error('Error parsing or migrating accounts', e); }
+        }
+        if (oldTradesData) {
+            try {
+                const trades: Trade[] = JSON.parse(oldTradesData);
+                for (const trade of trades) await add('trades', trade);
+            } catch (e) { console.error('Error parsing or migrating trades', e); }
+        }
+        // Clean up old data
+        localStorage.removeItem(TRADES_KEY);
+        localStorage.removeItem(ACCOUNTS_KEY);
+        console.log('Migration complete.');
+    } else {
+        const tradesInDb = await getAll('trades');
+        if (tradesInDb.length === 0) {
+            console.log('No data found. Seeding initial data...');
+            const defaultAccount: Account = { id: 'default', name: 'Default Account', balance: 10000 };
+            await add('accounts', defaultAccount);
+            
+            const initialTrades: Trade[] = [
+                { id: '1', pair: 'BTCUSD', type: 'buy', session: 'New York', pnl: 1500, rr: 2.5, date: '2024-07-15T10:00:00Z', notes: 'Good entry based on RSI divergence.', rating: 4, accountId: 'default', entryPrice: 65000, exitPrice: 66500 },
+                { id: '2', pair: 'EURUSD', type: 'sell', session: 'London', pnl: -50, rr: 1.5, date: '2024-07-14T14:30:00Z', notes: 'Stopped out, misread the trend.', rating: 2, accountId: 'default', entryPrice: 1.0750, exitPrice: 1.0755 },
+                { id: '3', pair: 'XAUUSD', type: 'buy', session: 'Asia', pnl: 2500, rr: 3, date: '2024-07-13T09:00:00Z', notes: 'Caught the breakout perfectly.', rating: 5, accountId: 'default', entryPrice: 2300, exitPrice: 2325 },
+            ];
+
+            for(const trade of initialTrades) await add('trades', trade);
+        }
+    }
 };
 
-export const runMigrations = () => {
-  const storedVersionStr = localStorage.getItem(DATA_VERSION_KEY);
-  let storedVersion = storedVersionStr ? parseInt(storedVersionStr, 10) : 0;
-
-  // If this is a fresh install (no version key), and there's no data, set version and exit.
-  if (storedVersion === 0 && !localStorage.getItem(TRADES_KEY) && !localStorage.getItem(ACCOUNTS_KEY)) {
-    localStorage.setItem(DATA_VERSION_KEY, CURRENT_VERSION.toString());
-    console.log(`Fresh install. Set data version to ${CURRENT_VERSION}.`);
-    return;
-  }
-  
-  if (storedVersion >= CURRENT_VERSION) {
-    // Data is already up-to-date.
-    return;
-  }
-
-  console.log(`Data version mismatch. Stored: ${storedVersion}, Current: ${CURRENT_VERSION}. Running migrations...`);
-
-  // Run all necessary migrations in sequence.
-  for (let v = storedVersion + 1; v <= CURRENT_VERSION; v++) {
-    const migration = migrations[v];
-    if (migration) {
-      try {
-        console.log(`Running migration for version ${v}...`);
-        migration();
-        console.log(`Migration to version ${v} successful.`);
-      } catch (error) {
-        console.error(`Migration for version ${v} failed:`, error);
-        // If a migration fails, we stop to avoid further data corruption.
-        // The version is not updated, so it will attempt to run again on the next app load.
-        return;
-      }
+export const runMigrations = async () => {
+  try {
+    await initDB();
+    const storedVersion = parseInt(localStorage.getItem(DATA_VERSION_KEY) || '0', 10);
+    
+    if (storedVersion < CURRENT_VERSION) {
+      console.log(`Upgrading data from version ${storedVersion} to ${CURRENT_VERSION}`);
+      await migrateAndSeed();
+      localStorage.setItem(DATA_VERSION_KEY, CURRENT_VERSION.toString());
+      console.log(`Data upgrade complete.`);
     }
-    // Update version for this step, even if no specific migration function ran.
-    // This allows skipping versions that only had non-breaking changes.
-    localStorage.setItem(DATA_VERSION_KEY, v.toString());
+  } catch (error) {
+    console.error("Failed to run migrations:", error);
   }
-
-  console.log(`All migrations complete. Data is now at version ${CURRENT_VERSION}.`);
 };

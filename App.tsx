@@ -48,10 +48,22 @@ export default function App() {
 
   useEffect(() => {
     // Run data migrations on app startup to ensure data compatibility with new versions.
-    runMigrations();
-
-    const timer = setTimeout(() => setLoading(false), 2000);
-    return () => clearTimeout(timer);
+    const initializeApp = async () => {
+        const startTime = Date.now();
+        await runMigrations();
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+        // Ensure splash screen is visible for a minimum duration for better UX
+        const remainingTime = 2000 - duration;
+        
+        if (remainingTime > 0) {
+            setTimeout(() => setLoading(false), remainingTime);
+        } else {
+            setLoading(false);
+        }
+    };
+    
+    initializeApp();
   }, []);
 
   const toggleTheme = () => {

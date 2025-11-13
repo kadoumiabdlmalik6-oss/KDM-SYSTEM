@@ -5,9 +5,9 @@ import * as accountService from '../services/accountService';
 interface AccountsContextType {
   accounts: Account[];
   loading: boolean;
-  addAccount: (account: Omit<Account, 'id'>) => void;
-  deleteAccount: (id: string) => void;
-  refreshAccounts: () => void;
+  addAccount: (account: Omit<Account, 'id'>) => Promise<void>;
+  deleteAccount: (id: string) => Promise<void>;
+  refreshAccounts: () => Promise<void>;
 }
 
 const AccountsContext = createContext<AccountsContextType | undefined>(undefined);
@@ -16,26 +16,31 @@ export const AccountsProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const refreshAccounts = useCallback(() => {
+  const refreshAccounts = useCallback(async () => {
     setLoading(true);
-    const fetchedAccounts = accountService.getAccounts();
-    setAccounts(fetchedAccounts);
-    setLoading(false);
+    try {
+        const fetchedAccounts = await accountService.getAccounts();
+        setAccounts(fetchedAccounts);
+    } catch (error) {
+        console.error("Failed to fetch accounts:", error);
+    } finally {
+        setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     refreshAccounts();
   }, [refreshAccounts]);
 
-  const addAccount = useCallback((account: Omit<Account, 'id'>) => {
-    accountService.addAccount(account);
-    refreshAccounts();
+  const addAccount = useCallback(async (account: Omit<Account, 'id'>) => {
+    await accountService.addAccount(account);
+    await refreshAccounts();
   }, [refreshAccounts]);
 
-  const deleteAccount = useCallback((id: string) => {
-    accountService.deleteAccount(id);
-    setAccounts(prevAccounts => prevAccounts.filter(account => account.id !== id));
-  }, []);
+  const deleteAccount = useCallback(async (id: string) => {
+    await accountService.deleteAccount(id);
+    await refreshAccounts();
+  }, [refreshAccounts]);
 
   const value = useMemo(() => ({
     accounts,

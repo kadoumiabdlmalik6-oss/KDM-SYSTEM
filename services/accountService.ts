@@ -1,34 +1,20 @@
 import { Account } from '../types';
+import * as db from './dbService';
 
-const ACCOUNTS_KEY = 'kdm_journal_accounts';
+const ACCOUNTS_STORE = 'accounts';
 
-const seedInitialData = () => {
-    if(!localStorage.getItem(ACCOUNTS_KEY)) {
-        const initialAccounts: Account[] = [
-            { id: 'default', name: 'Default Account', balance: 10000 },
-        ];
-        localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(initialAccounts));
-    }
+export const getAccounts = async (): Promise<Account[]> => {
+  await db.initDB();
+  return db.getAll<Account>(ACCOUNTS_STORE);
 };
 
-seedInitialData();
-
-export const getAccounts = (): Account[] => {
-  const accountsJson = localStorage.getItem(ACCOUNTS_KEY);
-  return accountsJson ? JSON.parse(accountsJson) : [];
+export const addAccount = async (account: Omit<Account, 'id'>): Promise<Account> => {
+  await db.initDB();
+  const newAccount: Account = { ...account, id: new Date().toISOString() + Math.random().toString(36).substr(2, 9) };
+  return db.add<Account>(ACCOUNTS_STORE, newAccount);
 };
 
-export const addAccount = (account: Omit<Account, 'id'>): void => {
-  const accounts = getAccounts();
-  const newAccount: Account = { ...account, id: new Date().toISOString() };
-  const updatedAccounts = [...accounts, newAccount];
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
-};
-
-export const deleteAccount = (id: string): void => {
-  const accounts = getAccounts();
-  const updatedAccounts = accounts.filter(account => account.id !== id);
-  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
-  // Note: Associated trades are now deleted via orchestration in the component
-  // to better separate concerns. See AccountsPage.tsx.
+export const deleteAccount = async (id: string): Promise<void> => {
+  await db.initDB();
+  return db.remove(ACCOUNTS_STORE, id);
 };

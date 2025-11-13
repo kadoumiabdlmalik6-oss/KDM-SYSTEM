@@ -93,8 +93,8 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
       setTradeToEdit(null);
   };
 
-  const handleDelete = (tradeId: string) => {
-      deleteTrade(tradeId);
+  const handleDelete = async (tradeId: string) => {
+      await deleteTrade(tradeId);
       setSelectedTrade(null);
   }
 

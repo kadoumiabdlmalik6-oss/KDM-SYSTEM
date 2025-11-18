@@ -71,7 +71,7 @@ const TradesListPage: React.FC<TradesListPageProps> = ({ navigate }) => {
   }, [trades, startDate, endDate, selectedPair, selectedAccountId]);
   
   const groupedTrades = useMemo(() => {
-    // FIX: Explicitly typed the accumulator in the reduce function to ensure
+    // Explicitly typed the accumulator in the reduce function to ensure
     // TypeScript correctly infers the type of `groupedTrades`. This resolves
     // an error where `tradesOnDate.map` would be called on an `unknown` type.
     return tradesToDisplay.reduce((acc: Record<string, Trade[]>, trade) => {

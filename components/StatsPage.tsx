@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useTrades } from '../hooks/useTrades';
 import Card from './common/Card';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } from 'recharts';
+import * as Recharts from 'recharts';
+const { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid } = Recharts;
 
 // Helper function to get the start of a given time unit
 const getStartOf = (unit: 'day' | 'week' | 'month' | 'year', date: Date): Date => {

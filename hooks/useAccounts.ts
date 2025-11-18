@@ -50,7 +50,8 @@ export const AccountsProvider: React.FC<{ children: ReactNode }> = ({ children }
     refreshAccounts
   }), [accounts, loading, addAccount, deleteAccount, refreshAccounts]);
 
-  return React.createElement(AccountsContext.Provider, { value }, children);
+  // FIX: Replaced JSX with React.createElement to be compatible with .ts file extension.
+  return React.createElement(AccountsContext.Provider, { value: value }, children);
 };
 
 export const useAccounts = (): AccountsContextType => {

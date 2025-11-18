@@ -2,7 +2,9 @@ import React from 'react';
 import { useTrades } from '../../hooks/useTrades';
 import Card from '../common/Card';
 import { Page, Trade } from '../../types';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import * as Recharts from 'recharts';
+const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
+
 
 interface HomePageProps {
   navigate: (page: Page) => void;

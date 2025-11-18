@@ -68,7 +68,8 @@ export const TradesProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     refreshTrades 
   }), [trades, loading, addTrade, updateTrade, deleteTrade, deleteTradesByAccountId, refreshTrades]);
 
-  return React.createElement(TradesContext.Provider, { value }, children);
+  // FIX: Replaced JSX with React.createElement to be compatible with .ts file extension.
+  return React.createElement(TradesContext.Provider, { value: value }, children);
 };
 
 // Create the custom hook to use the context

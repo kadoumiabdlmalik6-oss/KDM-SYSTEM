@@ -57,7 +57,7 @@ export const analyzeTradeWithGemini = async (trade: Trade): Promise<string> => {
   }
 };
 
-// FIX: Add and export the missing `getMotivationQuote` function.
+// Add and export the missing `getMotivationQuote` function.
 export const getMotivationQuote = async (): Promise<string> => {
   const prompt = `
     قدم اقتباسًا تحفيزيًا قصيرًا وقويًا ومتبصرًا ومناسبًا لمتداول مالي باللغة العربية.
@@ -82,4 +82,37 @@ export const getMotivationQuote = async (): Promise<string> => {
     // Return a fallback quote on error
     return "السوق هو أداة لنقل الأموال من غير الصبورين إلى الصبورين.";
   }
+};
+
+
+export const analyzeMarketWithGemini = async (pair: string): Promise<string> => {
+    const prompt = `
+      بصفتك محلل أسواق مالية محترف، قدم تحليلًا فنيًا موجزًا ومفصلاً لزوج التداول التالي: ${pair}.
+      يجب أن يكون التحليل مناسبًا لمتداول متوسط الخبرة.
+      نسق ردك باستخدام الماركداون باللغة العربية.
+
+      **التحليل يجب أن يتضمن:**
+      - **نظرة عامة على الاتجاه الحالي:** (صاعد، هابط، عرضي) مع شرح بسيط.
+      - **مستويات الدعم والمقاومة الرئيسية:** اذكر أهم المستويات السعرية التي يجب مراقبتها.
+      - **سيناريوهات محتملة:** (سيناريو صاعد وسيناريو هابط) مع نقاط الدخول أو التأكيد المحتملة.
+      - **ملخص:** خلاصة سريعة وتوصية عامة (مثلاً: "الحذر مطلوب" أو "الفرص قد تكون متاحة للشراء فوق مستوى X").
+      - **إخلاء مسؤولية:** "هذا التحليل هو لأغراض تعليمية فقط ولا يعتبر نصيحة مالية."
+
+      **تحليلك لـ ${pair}:**
+    `;
+
+    try {
+        const gemini = getAi();
+        const response = await gemini.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+        });
+        return response.text;
+    } catch (error) {
+        console.error("Error analyzing market with Gemini:", error);
+        if (error instanceof Error && error.message.includes("API key")) {
+            return "فشل تحليل الذكاء الاصطناعي. لم يتم تكوين مفتاح Gemini API بشكل صحيح.";
+        }
+        return "حدث خطأ أثناء تحليل السوق. يرجى المحاولة مرة أخرى لاحقًا.";
+    }
 };

@@ -2,10 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { useTrades } from '../../hooks/useTrades';
 import Card from '../common/Card';
 import { Account, Page, Trade } from '../../types';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import * as Recharts from 'recharts';
 import TradeListItem from '../common/TradeListItem';
 import TradeDetailView from '../common/TradeDetailView';
 import AddTradePage from './AddTradePage';
+const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } = Recharts;
 
 
 interface AccountStatsPageProps {
